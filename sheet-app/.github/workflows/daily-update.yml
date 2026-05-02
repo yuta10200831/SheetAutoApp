@@ -1,0 +1,30 @@
+name: Daily Sheet Auto Update
+
+on:
+  schedule:
+    # 毎日 UTC 15:00 (日本時間 0:00) に実行
+    - cron: '0 15 * * *'
+  workflow_dispatch: # 手動実行もできるようにする
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Create credentials.json
+      run: |
+        echo '${{ secrets.GOOGLE_CREDENTIALS }}' > sheet-app/src/main/resources/credentials.json
+        
+    - name: Build and Run
+      working-directory: ./sheet-app
+      run: ./mvnw spring-boot:run
