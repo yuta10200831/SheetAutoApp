@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 @Component
@@ -24,9 +25,9 @@ public class DailySheetTask {
     // GitHub Actionsから呼ばれるため、@Scheduledは削除
     public void executeDailyTask() {
         System.out.println("=========================================");
-        System.out.println("定期実行タスクを開始します: " + LocalDate.now());
+        System.out.println("定期実行タスクを開始します: " + LocalDate.now(ZoneId.of("Asia/Tokyo")));
         
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Tokyo"));
         
         System.out.println("「全体」シートのグループ表示を更新します。");
         updateDailyGroups(today, "全体!A:A", ZENTAI_SHEET_ID);
