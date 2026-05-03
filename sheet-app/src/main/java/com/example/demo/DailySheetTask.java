@@ -13,14 +13,17 @@ import java.util.List;
 public class DailySheetTask {
 
     private final GoogleSheetsService sheetsService;
+    private final LineNotificationService lineNotificationService; // 追加：LINE通知用サービス
+
     // 「全体」シートのID
     private static final int ZENTAI_SHEET_ID = 898078840;
     // 「学習時間を入れていく」シートのID
     private static final int GAKUSHU_SHEET_ID = 147573482;
 
     @Autowired
-    public DailySheetTask(GoogleSheetsService sheetsService) {
+    public DailySheetTask(GoogleSheetsService sheetsService, LineNotificationService lineNotificationService) {
         this.sheetsService = sheetsService;
+        this.lineNotificationService = lineNotificationService; // 追加：コンストラクタで受け取る
     }
 
     // GitHub Actionsから呼ばれるため、@Scheduledは削除
@@ -28,19 +31,36 @@ public class DailySheetTask {
         System.out.println("=========================================");
         System.out.println("定期実行タスクを開始します: " + LocalDate.now(ZoneId.of("Asia/Tokyo")));
         
-        LocalDate today = LocalDate.now(ZoneId.of("Asia/Tokyo"));
-        
-        System.out.println("「全体」シートのグループ表示を更新します。");
-        updateDailyGroups(today, "全体!A:A", ZENTAI_SHEET_ID);
-        
-        System.out.println("「学習時間を入れていく」シートのグループ表示を更新します。");
-        updateDailyGroups(today, "学習時間を入れていく!A:ZZ", GAKUSHU_SHEET_ID);
+        try {
+            LocalDate today = LocalDate.now(ZoneId.of("Asia/Tokyo"));
+            
+            System.out.println("「全体」シートのグループ表示を更新します。");
+            updateDailyGroups(today, "全体!A:A", ZENTAI_SHEET_ID);
+            
+            System.out.println("「学習時間を入れていく」シートのグループ表示を更新します。");
+            updateDailyGroups(today, "学習時間を入れていく!A:ZZ", GAKUSHU_SHEET_ID);
 
-        System.out.println("月別の学習時間を集計して更新します。");
-        updateMonthlySummary();
+            System.out.println("月別の学習時間を集計して更新します。");
+            updateMonthlySummary();
 
-        System.out.println("定期実行タスクが完了しました。");
-        System.out.println("=========================================");
+            System.out.println("定期実行タスクが完了しました。");
+            System.out.println("=========================================");
+
+            // 成功した時のLINE通知！
+            String successMessage = "✅ 今日のシート更新と学習時間の集計が完了したよ！\n今日もお疲れ様！☕️";
+            lineNotificationService.sendLineMessage(successMessage);
+
+        } catch (Exception e) {
+            System.err.println("タスク実行中にエラーが発生しました: " + e.getMessage());
+            e.printStackTrace();
+
+            // エラーが起きた時のLINE通知！
+            String errorMessage = "❌ シートの更新中にエラーが発生したみたい...\n詳細: " + e.getMessage();
+            lineNotificationService.sendLineMessage(errorMessage);
+            
+            // GitHub Actionsにもエラーを伝えるために再スローする
+            throw e;
+        }
     }
     
     /**
