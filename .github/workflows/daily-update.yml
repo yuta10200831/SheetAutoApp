@@ -24,7 +24,10 @@ jobs:
     - name: Create credentials.json
       run: |
         echo '${{ secrets.GOOGLE_CREDENTIALS }}' > sheet-app/src/main/resources/credentials.json
-        
+
     - name: Build and Run
       working-directory: ./sheet-app
+      env:
+        LINE_BOT_CHANNEL_TOKEN: ${{ secrets.LINE_BOT_CHANNEL_TOKEN }}
+        LINE_BOT_USER_ID: ${{ secrets.LINE_BOT_USER_ID }}
       run: ./mvnw spring-boot:run
