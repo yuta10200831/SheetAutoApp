@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -34,6 +35,9 @@ public class DailySheetTask {
         
         System.out.println("「学習時間を入れていく」シートのグループ表示を更新します。");
         updateDailyGroups(today, "学習時間を入れていく!A:ZZ", GAKUSHU_SHEET_ID);
+
+        System.out.println("月別の学習時間を集計して更新します。");
+        updateMonthlySummary();
 
         System.out.println("定期実行タスクが完了しました。");
         System.out.println("=========================================");
@@ -138,5 +142,93 @@ public class DailySheetTask {
                 System.out.println("今日の日付が見つかりませんでした。");
             }
         }
+    }
+
+    /**
+     * 「学習時間を入れていく」シートから日々の学習時間を読み取り、
+     * 月ごとに集計して「時間集計シート」に書き込む処理
+     */
+    private void updateMonthlySummary() {
+        System.out.println("月別学習時間の集計を開始します...");
+        
+        // 1. データの読み取り
+        List<List<Object>> data = sheetsService.getSheetData("学習時間を入れていく!A:ZZ");
+        if (data == null || data.size() <= 2) {
+            System.out.println("集計するデータが見つかりませんでした。");
+            return;
+        }
+
+        // 1月〜12月の合計を入れる配列（インデックス0が1月、11が12月）
+        double[] monthlyTotals = new double[12];
+        
+        // 3行目（インデックス2）にある日付の列を取得
+        List<Object> dateRow = data.get(2);
+
+        // 2. 月ごとに集計
+        int count = 0;
+        for (int col = 0; col < dateRow.size(); col++) {
+            if (dateRow.get(col) == null) continue;
+            String dateStr = dateRow.get(col).toString().trim();
+            if (dateStr.isEmpty()) continue;
+
+            String[] parts = dateStr.split("/");
+            if (parts.length >= 2) {
+                try {
+                    int month = -1;
+                    if (parts.length == 2) {
+                        // "5/2" のパターン
+                        month = Integer.parseInt(parts[0]);
+                    } else if (parts.length == 3) {
+                        // "2026/5/2" のパターン
+                        month = Integer.parseInt(parts[1]);
+                    }
+                    
+                    if (month >= 1 && month <= 12) {
+                        // 学習時間が入っている行を計算（行インデックス = 列インデックス + 2）
+                        int targetRow = col + 2;
+                        
+                        // データが存在する範囲内かチェック
+                        if (targetRow < data.size()) {
+                            List<Object> rowData = data.get(targetRow);
+                            if (col < rowData.size() && rowData.get(col) != null) {
+                                String timeStr = rowData.get(col).toString().trim();
+                                if (!timeStr.isEmpty()) {
+                                    try {
+                                        double time = Double.parseDouble(timeStr);
+                                        monthlyTotals[month - 1] += time;
+                                        count++;
+                                    } catch (NumberFormatException e) {
+                                        System.out.println("スキップ(時間エラー): 日付=" + dateStr + ", 時間=" + timeStr);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    System.out.println("スキップ(日付エラー): " + dateStr);
+                }
+            }
+        }
+
+        System.out.println("合計 " + count + " 件の学習時間データを集計しました。");
+
+        // 3. 書き込み用のデータを作成（C2:C13に書き込むための縦長のリスト）
+        List<List<Object>> writeData = new ArrayList<>();
+        for (int i = 0; i < 12; i++) {
+            List<Object> row = new ArrayList<>();
+            // 合計が0の場合は空白にしておく（グラフが綺麗になるように）
+            if (monthlyTotals[i] > 0) {
+                row.add(monthlyTotals[i]);
+                System.out.println((i + 1) + "月の合計: " + monthlyTotals[i] + "時間");
+            } else {
+                row.add("");
+            }
+            writeData.add(row);
+        }
+
+        // 4. 集計シートへ書き込み
+        System.out.println("集計結果を「【2026】学習時間の集計」シートに書き込みます...");
+        sheetsService.writeData("時間集計!C2:C13", writeData);
+        System.out.println("月別集計が完了しました！");
     }
 }
