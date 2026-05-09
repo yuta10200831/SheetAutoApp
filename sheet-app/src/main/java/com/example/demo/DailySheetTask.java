@@ -40,8 +40,8 @@ public class DailySheetTask {
             System.out.println("「学習時間を入れていく」シートのグループ表示を更新します。");
             updateDailyGroups(today, "学習時間を入れていく!A:ZZ", GAKUSHU_SHEET_ID);
 
-            System.out.println("月別の学習時間を集計して更新します。");
-            updateMonthlySummary();
+            System.out.println("月別と今週の学習時間を集計して更新します。");
+            updateSummaries();
 
             System.out.println("定期実行タスクが完了しました。");
             System.out.println("=========================================");
@@ -166,10 +166,10 @@ public class DailySheetTask {
 
     /**
      * 「学習時間を入れていく」シートから日々の学習時間を読み取り、
-     * 月ごとに集計して「時間集計シート」に書き込む処理
+     * 月別および今週の学習時間を集計して「時間集計シート」に書き込む処理
      */
-    private void updateMonthlySummary() {
-        System.out.println("月別学習時間の集計を開始します...");
+    private void updateSummaries() {
+        System.out.println("学習時間（月別・週間）の集計を開始します...");
         
         // 1. データの読み取り
         List<List<Object>> data = sheetsService.getSheetData("学習時間を入れていく!A:ZZ");
@@ -178,13 +178,19 @@ public class DailySheetTask {
             return;
         }
 
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Tokyo"));
+        LocalDate startOfWeek = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+        LocalDate endOfWeek = today.with(java.time.temporal.TemporalAdjusters.nextOrSame(java.time.DayOfWeek.SUNDAY));
+
         // 1月〜12月の合計を入れる配列（インデックス0が1月、11が12月）
         double[] monthlyTotals = new double[12];
+        double weeklyTotal = 0;
+        int currentYear = today.getYear();
         
         // 3行目（インデックス2）にある日付の列を取得
         List<Object> dateRow = data.get(2);
 
-        // 2. 月ごとに集計
+        // 2. 集計
         int count = 0;
         for (int col = 0; col < dateRow.size(); col++) {
             if (dateRow.get(col) == null) continue;
@@ -194,13 +200,19 @@ public class DailySheetTask {
             String[] parts = dateStr.split("/");
             if (parts.length >= 2) {
                 try {
+                    int year = currentYear;
                     int month = -1;
+                    int day = -1;
+
                     if (parts.length == 2) {
                         // "5/2" のパターン
                         month = Integer.parseInt(parts[0]);
+                        day = Integer.parseInt(parts[1]);
                     } else if (parts.length == 3) {
                         // "2026/5/2" のパターン
+                        year = Integer.parseInt(parts[0]);
                         month = Integer.parseInt(parts[1]);
+                        day = Integer.parseInt(parts[2]);
                     }
                     
                     if (month >= 1 && month <= 12) {
@@ -215,8 +227,20 @@ public class DailySheetTask {
                                 if (!timeStr.isEmpty()) {
                                     try {
                                         double time = Double.parseDouble(timeStr);
+                                        // 月別集計
                                         monthlyTotals[month - 1] += time;
                                         count++;
+                                        
+                                        // 週間集計
+                                        try {
+                                            LocalDate cellDate = LocalDate.of(year, month, day);
+                                            if (!cellDate.isBefore(startOfWeek) && !cellDate.isAfter(endOfWeek)) {
+                                                weeklyTotal += time;
+                                            }
+                                        } catch (Exception dateEx) {
+                                            // 日付変換エラー時は週間集計のみスキップ
+                                        }
+                                        
                                     } catch (NumberFormatException e) {
                                         System.out.println("スキップ(時間エラー): 日付=" + dateStr + ", 時間=" + timeStr);
                                     }
@@ -231,9 +255,10 @@ public class DailySheetTask {
         }
 
         System.out.println("合計 " + count + " 件の学習時間データを集計しました。");
+        System.out.println("今週の学習時間合計: " + weeklyTotal + "時間");
 
         // 3. 書き込み用のデータを作成（C2:C13に書き込むための縦長のリスト）
-        List<List<Object>> writeData = new ArrayList<>();
+        List<List<Object>> monthlyWriteData = new ArrayList<>();
         for (int i = 0; i < 12; i++) {
             List<Object> row = new ArrayList<>();
             // 合計が0の場合は空白にしておく（グラフが綺麗になるように）
@@ -243,12 +268,22 @@ public class DailySheetTask {
             } else {
                 row.add("");
             }
-            writeData.add(row);
+            monthlyWriteData.add(row);
         }
 
-        // 4. 集計シートへ書き込み
-        System.out.println("集計結果を「【2026】学習時間の集計」シートに書き込みます...");
-        sheetsService.writeData("時間集計!C2:C13", writeData);
-        System.out.println("月別集計が完了しました！");
+        // 4. 集計シートへ書き込み（月別）
+        System.out.println("月別集計結果を「時間集計!C2:C13」に書き込みます...");
+        sheetsService.writeData("時間集計!C2:C13", monthlyWriteData);
+        
+        // 5. 集計シートへ書き込み（週間）
+        List<List<Object>> weeklyWriteData = new ArrayList<>();
+        List<Object> weeklyRow = new ArrayList<>();
+        weeklyRow.add(weeklyTotal > 0 ? weeklyTotal : "");
+        weeklyWriteData.add(weeklyRow);
+        
+        System.out.println("週間集計結果を「時間集計!D2」に書き込みます...");
+        sheetsService.writeData("時間集計!D2", weeklyWriteData);
+
+        System.out.println("集計処理がすべて完了しました！");
     }
 }
