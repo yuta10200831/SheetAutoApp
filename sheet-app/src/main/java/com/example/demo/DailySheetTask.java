@@ -104,11 +104,19 @@ public class DailySheetTask {
                     // 既存の列グループをリセット
                     sheetsService.deleteGroups(sheetId, "COLUMNS", 2, row3.size()); // C列(index 2)から最後まで
                     
-                    // C列(index 2)から、昨日より前の列(targetIndex - 2)までをグループ化して閉じる
-                    int endColIndex = targetIndex - 2;
+                    // C列(index 2)から、一昨日の列(targetIndex - 1)までをグループ化して閉じる
+                    int endColIndex = targetIndex - 1;
                     if (endColIndex > 2) {
                         sheetsService.addGroup(sheetId, "COLUMNS", 2, endColIndex);
                         sheetsService.updateGroupState(sheetId, "COLUMNS", 2, endColIndex, true);
+                    }
+                    
+                    // 明日以降の列(targetIndex + 1)から最後までをグループ化して閉じる
+                    int futureStartCol = targetIndex + 1;
+                    int futureEndCol = row3.size();
+                    if (futureEndCol > futureStartCol) {
+                        sheetsService.addGroup(sheetId, "COLUMNS", futureStartCol, futureEndCol);
+                        sheetsService.updateGroupState(sheetId, "COLUMNS", futureStartCol, futureEndCol, true);
                     }
                 } else {
                     System.out.println("今日の日付が列に見つかりませんでした。");
@@ -126,11 +134,19 @@ public class DailySheetTask {
                 // 既存の行グループをリセット
                 sheetsService.deleteGroups(sheetId, "ROWS", 4, data.size() + 100); // 5行目(index 4)から最後まで (余裕を持たせる)
                 
-                // 5行目(index 4)から、昨日より前の行(targetRowIndex - 2)までをグループ化して閉じる
-                int endRowIndex = targetRowIndex - 2;
+                // 5行目(index 4)から、一昨日の行(targetRowIndex - 1)までをグループ化して閉じる
+                int endRowIndex = targetRowIndex - 1;
                 if (endRowIndex > 4) {
                     sheetsService.addGroup(sheetId, "ROWS", 4, endRowIndex);
                     sheetsService.updateGroupState(sheetId, "ROWS", 4, endRowIndex, true);
+                }
+                
+                // 明日以降の行(targetRowIndex + 1)から最後までをグループ化して閉じる
+                int futureStartRow = targetRowIndex + 1;
+                int futureEndRow = data.size();
+                if (futureEndRow > futureStartRow) {
+                    sheetsService.addGroup(sheetId, "ROWS", futureStartRow, futureEndRow);
+                    sheetsService.updateGroupState(sheetId, "ROWS", futureStartRow, futureEndRow, true);
                 }
             } else {
                 System.out.println("今日の日付が見つからなかったため、行のグループ化をスキップします。");
@@ -153,13 +169,21 @@ public class DailySheetTask {
                 System.out.println("今日の日付は " + (targetIndex + 1) + " 行目に見つかりました。");
                 
                 // 既存の行グループをリセット
-                sheetsService.deleteGroups(sheetId, "ROWS", 1, data.size()); // 2行目(index 1)から最後まで
+                sheetsService.deleteGroups(sheetId, "ROWS", 1, data.size() + 10); // 2行目(index 1)から最後まで
                 
-                // 2行目(index 1)から、昨日より前の行(targetIndex - 2)までをグループ化して閉じる
-                int endRowIndex = targetIndex - 2;
+                // 2行目(index 1)から、一昨日の行(targetIndex - 1)までをグループ化して閉じる
+                int endRowIndex = targetIndex - 1;
                 if (endRowIndex > 1) {
                     sheetsService.addGroup(sheetId, "ROWS", 1, endRowIndex);
                     sheetsService.updateGroupState(sheetId, "ROWS", 1, endRowIndex, true);
+                }
+                
+                // 明日以降の行(targetIndex + 1)から最後までをグループ化して閉じる
+                int futureStartRow = targetIndex + 1;
+                int futureEndRow = data.size();
+                if (futureEndRow > futureStartRow) {
+                    sheetsService.addGroup(sheetId, "ROWS", futureStartRow, futureEndRow);
+                    sheetsService.updateGroupState(sheetId, "ROWS", futureStartRow, futureEndRow, true);
                 }
             } else {
                 System.out.println("今日の日付が見つかりませんでした。");

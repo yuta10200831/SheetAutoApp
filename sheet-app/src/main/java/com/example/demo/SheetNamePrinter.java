@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 import java.lang.reflect.Method;
 import java.util.List;
 
-@Component
+// @Component
 public class SheetNamePrinter implements CommandLineRunner {
 
     private final GoogleSheetsService sheetsService;
