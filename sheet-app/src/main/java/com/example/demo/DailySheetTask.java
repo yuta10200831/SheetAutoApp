@@ -15,7 +15,7 @@ public class DailySheetTask {
     private final GoogleSheetsService sheetsService;
     private final LineNotificationService lineNotificationService; // 追加：LINE通知用サービス
 
-    // 「全体」シートのID
+    // 「学習内容」シートのID
     private static final int ZENTAI_SHEET_ID = 898078840;
     // 「学習時間を入れていく」シートのID
     private static final int GAKUSHU_SHEET_ID = 147573482;
@@ -34,8 +34,8 @@ public class DailySheetTask {
         try {
             LocalDate today = LocalDate.now(ZoneId.of("Asia/Tokyo"));
             
-            System.out.println("「全体」シートのグループ表示を更新します。");
-            updateDailyGroups(today, "全体!A:A", ZENTAI_SHEET_ID);
+            System.out.println("「学習内容」シートのグループ表示を更新します。");
+            updateDailyGroups(today, "学習内容!A:A", ZENTAI_SHEET_ID);
             
             System.out.println("「学習時間を入れていく」シートのグループ表示を更新します。");
             updateDailyGroups(today, "学習時間を入れていく!A:ZZ", GAKUSHU_SHEET_ID);
@@ -104,7 +104,7 @@ public class DailySheetTask {
                     // 既存の列グループをリセット
                     sheetsService.deleteGroups(sheetId, "COLUMNS", 2, row3.size()); // C列(index 2)から最後まで
                     
-                    // C列(index 2)から、一昨々日の列(targetIndex - 2)までをグループ化して閉じる
+                    // C列(index 2)から、昨日より前の列(targetIndex - 2)までをグループ化して閉じる
                     int endColIndex = targetIndex - 2;
                     if (endColIndex > 2) {
                         sheetsService.addGroup(sheetId, "COLUMNS", 2, endColIndex);
@@ -126,7 +126,7 @@ public class DailySheetTask {
                 // 既存の行グループをリセット
                 sheetsService.deleteGroups(sheetId, "ROWS", 4, data.size() + 100); // 5行目(index 4)から最後まで (余裕を持たせる)
                 
-                // 5行目(index 4)から、一昨々日の行(targetRowIndex - 2)までをグループ化して閉じる
+                // 5行目(index 4)から、昨日より前の行(targetRowIndex - 2)までをグループ化して閉じる
                 int endRowIndex = targetRowIndex - 2;
                 if (endRowIndex > 4) {
                     sheetsService.addGroup(sheetId, "ROWS", 4, endRowIndex);
@@ -137,7 +137,7 @@ public class DailySheetTask {
             }
             
         } else {
-            // 「全体」シートの場合 (行のグループ化)
+            // 「学習内容」シートの場合 (行のグループ化)
             // A列のデータを上から順に見ていく
             for (int i = 1; i < data.size(); i++) {
                 List<Object> row = data.get(i);
@@ -155,7 +155,7 @@ public class DailySheetTask {
                 // 既存の行グループをリセット
                 sheetsService.deleteGroups(sheetId, "ROWS", 1, data.size()); // 2行目(index 1)から最後まで
                 
-                // 2行目(index 1)から、一昨々日の行(targetIndex - 2)までをグループ化して閉じる
+                // 2行目(index 1)から、昨日より前の行(targetIndex - 2)までをグループ化して閉じる
                 int endRowIndex = targetIndex - 2;
                 if (endRowIndex > 1) {
                     sheetsService.addGroup(sheetId, "ROWS", 1, endRowIndex);
